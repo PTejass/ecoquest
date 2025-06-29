@@ -113,20 +113,22 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
 
   return (
     <section>
+      {searchQuery.trim() && (
+        <div className="mb-8">
+          <AISearchResults
+            result={aiResult}
+            isLoading={isLoading}
+            error={error}
+            darkMode={darkMode}
+          />
+        </div>
+      )}
+      
       <h2 className={`text-xl font-semibold mb-6 ${
         darkMode ? 'text-gray-100' : 'text-gray-700'
       }`}>
         Waste Disposal in {location}
       </h2>
-      
-      {searchQuery.trim() && (
-        <AISearchResults
-          result={aiResult}
-          isLoading={isLoading}
-          error={error}
-          darkMode={darkMode}
-        />
-      )}
       
       {filteredWasteTypes.length === 0 ? (
         <p className={`mt-6 ${darkMode ? 'text-gray-400 italic' : 'text-gray-500 italic'}`}>
