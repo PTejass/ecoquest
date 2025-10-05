@@ -1,55 +1,56 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+// Lazy-initialize Gemini API only when needed and when the key exists
+function getGenAI(): GoogleGenerativeAI {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+  if (!apiKey) {
+    throw new Error('Missing VITE_GEMINI_API_KEY');
+  }
+  return new GoogleGenerativeAI(apiKey);
+}
+
+function resolveSupportedModel() {
+  const candidates = [
+    'gemini-2.5-flash', 
+    'gemini-2.5-pro',   // Most capable fallback
+    'gemini-1.5-flash', // Previous fast model fallback
+    'gemini-1.0-pro-vision', 
+  ];
+  // Return the first candidate; API will error if unavailable and we'll try the next
+  return candidates;
+}
 
 export async function detectWaste(imageBase64: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-image' });
-    
-    const prompt = `Analyze this image and identify the waste item. Follow these rules:
-
-    1. Identify the main item in the image
-    2. Be specific about the type of waste (e.g., "plastic water bottle" not just "plastic")
-    3. If multiple items, identify the most prominent waste item
-    4. Return ONLY the name of the waste item, nothing else
-    5. Do not include any additional text or formatting
-
-    Examples of good responses:
-    - "plastic water bottle"
-    - "aluminum soda can"
-    - "cardboard box"
-    - "glass wine bottle"
-    - "paper coffee cup"
-    -"action figure"
-    - "blade"
-    -"metal plate"
-
-    Return ONLY the waste item name, no other text.`;
-
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: imageBase64,
-          mimeType: 'image/jpeg'
-        }
+    const genAI = getGenAI();
+    const modelCandidates = resolveSupportedModel();
+    let lastError: unknown = null;
+    for (const modelName of modelCandidates) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent([
+          `Analyze this image and identify the waste item. Return only the name.PLEASE NOTICE THE SPECIFIC WASTE ITEM AND RETURN THE NAME OF THE WASTE ITEM.THAT'S VERY IMPORTANT. AND NOTICE THE MOST OBVIOUS ITEM IN THE IMAGE.`,
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: 'image/jpeg'
+            }
+          }
+        ]);
+        const response = await result.response;
+        const wasteName = response.text().trim();
+        const cleanWasteName = wasteName
+          .replace(/^["']|["']$/g, '')
+          .replace(/^waste item:?\s*/i, '')
+          .trim();
+        return { wasteName: cleanWasteName, success: true };
+      } catch (err) {
+        lastError = err;
+        // try next model
+        continue;
       }
-    ]);
-
-    const response = await result.response;
-    const wasteName = response.text().trim();
-
-    // Clean up the response to ensure we only get the waste name
-    const cleanWasteName = wasteName
-      .replace(/^["']|["']$/g, '') // Remove quotes if present
-      .replace(/^waste item:?\s*/i, '') // Remove "waste item:" prefix if present
-      .trim();
-
-    return {
-      wasteName: cleanWasteName,
-      success: true
-    };
+    }
+    throw lastError ?? new Error('No supported Gemini model available');
   } catch (error) {
     console.error('Error detecting waste:', error);
     return {

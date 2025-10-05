@@ -3,10 +3,9 @@ import { wasteTypes } from '../data/wasteTypes';
 import { locationSpecificInfo } from '../data/locations';
 import WasteCard from './WasteCard';
 import AISearchResults from './AISearchResults';
-import { createClient } from '@supabase/supabase-js';
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Read env vars at runtime and avoid creating clients at module scope
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 interface WasteGuideProps {
   location: string;
   searchQuery: string;
@@ -75,6 +74,10 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
       setError(null);
 
       try {
+        // Validate required env vars to avoid runtime crashes
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error('Missing Supabase configuration. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+        }
         const response = await fetch(`${supabaseUrl}/functions/v1/gemini-search`, {
           method: 'POST',
           headers: {
