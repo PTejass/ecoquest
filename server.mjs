@@ -39,7 +39,7 @@ app.post('/api/detect-waste', upload.single('image'), async (req, res) => {
     const base64Image = req.file.buffer.toString('base64');
 
     // Initialize Gemini Pro Vision model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro-vision' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro-vision' });
 
     // Prepare the prompt
     const prompt = `Analyze this image and identify the waste item. Return ONLY the name of the waste item, nothing else. For example, if you see a plastic bottle, just return "plastic bottle". If you see multiple items, identify the most prominent waste item.`;
