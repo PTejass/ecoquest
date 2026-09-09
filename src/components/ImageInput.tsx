@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
+import API_URL from '../api/config';
 
 interface ImageInputProps {
   darkMode: boolean;
@@ -102,7 +103,7 @@ const ImageInput = ({ darkMode, onImageProcessed }: ImageInputProps) => {
       formData.append('image', blob, 'image.jpeg');
 
       console.log('Sending to /api/detect-waste...');
-      const res = await fetch('/api/detect-waste', {
+      const res = await fetch(`${API_URL}/api/detect-waste`, {
         method: 'POST',
         body: formData
       });

@@ -3,6 +3,7 @@ import { wasteTypes } from '../data/wasteTypes';
 import { locationSpecificInfo } from '../data/locations';
 import WasteCard from './WasteCard';
 import AISearchResults from './AISearchResults';
+import API_URL from '../api/config';
 interface WasteGuideProps {
   location: string;
   searchQuery: string;
@@ -72,7 +73,7 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
 
       try {
         console.log('Fetching from /api/gemini-search with query:', searchQuery);
-        const response = await fetch('/api/gemini-search', {
+        const response = await fetch(`${API_URL}/api/gemini-search`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
