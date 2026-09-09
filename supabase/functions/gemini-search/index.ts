@@ -51,20 +51,21 @@ Deno.serve(async (req) => {
     const cleanQuery = query.trim().replace(/\s+/g, ' ');
     const queryForPrompt = cleanQuery.length < 10 ? `How do I dispose of ${cleanQuery}?` : cleanQuery;
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!apiKey) {
+    const apiKeys = [
+      Deno.env.get("GEMINI_API_KEY_1") || Deno.env.get("GEMINI_API_KEY"),
+      Deno.env.get("GEMINI_API_KEY_2"),
+      Deno.env.get("GEMINI_API_KEY_3")
+    ].filter(Boolean);
+
+    if (apiKeys.length === 0) {
       return new Response(JSON.stringify({
         error: "Configuration error",
-        message: "API key not found"
+        message: "No API keys found"
       }), {
         status: 500,
         headers: corsHeaders
       });
     }
-
-    const ai = new GoogleGenAI({
-      apiKey
-    });
 
     // Format the prompt with proper spacing and line breaks
     const prompt = `Given this waste disposal related query: "${queryForPrompt}"
@@ -105,29 +106,31 @@ Use informative tone.`;
     const prompts = [prompt, `Provide waste disposal guidance for: "${queryForPrompt}". Include type, disposal methods, safety tips, and environmental impact.`];
 
     for (const model of models) {
-      for (const currentPrompt of prompts) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: currentPrompt
-          });
-          const text = response.text;
-          if (!text) {
-            throw new Error("Empty response from AI model");
+      for (const apiKey of apiKeys) {
+        for (const currentPrompt of prompts) {
+          try {
+            const ai = new GoogleGenAI({ apiKey });
+            const response = await ai.models.generateContent({
+              model,
+              contents: currentPrompt
+            });
+            const text = response.text;
+            if (!text) {
+              throw new Error("Empty response from AI model");
+            }
+            return new Response(JSON.stringify({
+              response: text
+            }), {
+              headers: corsHeaders
+            });
+          } catch (error) {
+            console.error(`Failed with model ${model} on key:`, error.message);
           }
-          return new Response(JSON.stringify({
-            response: text
-          }), {
-            headers: corsHeaders
-          });
-        } catch (error) {
-          // Continue to next prompt/model
-          console.error(`Failed with model ${model}:`, error.message);
         }
       }
     }
 
-    throw new Error("Failed to generate response with all model fallbacks");
+    throw new Error("Failed to generate response with all model and key fallbacks");
   } catch (error) {
     return new Response(JSON.stringify({
       error: "Service error",
