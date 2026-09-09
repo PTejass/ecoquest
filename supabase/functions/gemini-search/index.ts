@@ -94,41 +94,40 @@ Then, use these exact headings with emoji:
 Keep each section concise but informative, using bullet points where appropriate.
 Use informative tone.`;
 
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: prompt
-      });
-      const text = response.text;
-      if (!text) {
-        throw new Error("Empty response from AI model");
-      }
-      return new Response(JSON.stringify({
-        response: text
-      }), {
-        headers: corsHeaders
-      });
-    } catch (error) {
-      // If first attempt fails, try with a simpler prompt
-      try {
-        const simplePrompt = `Provide waste disposal guidance for: "${queryForPrompt}". Include type, disposal methods, safety tips, and environmental impact.`;
-        const response = await ai.models.generateContent({
-          model: "gemini-2.0-flash",
-          contents: simplePrompt
-        });
-        const text = response.text;
-        if (!text) {
-          throw new Error("Empty response from AI model");
+    const models = [
+      "gemini-3.5-flash-lite",
+      "gemini-3.8-flash",
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+      "gemini-3.1-pro-preview"
+    ];
+    const prompts = [prompt, `Provide waste disposal guidance for: "${queryForPrompt}". Include type, disposal methods, safety tips, and environmental impact.`];
+
+    for (const model of models) {
+      for (const currentPrompt of prompts) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: currentPrompt
+          });
+          const text = response.text;
+          if (!text) {
+            throw new Error("Empty response from AI model");
+          }
+          return new Response(JSON.stringify({
+            response: text
+          }), {
+            headers: corsHeaders
+          });
+        } catch (error) {
+          // Continue to next prompt/model
+          console.error(`Failed with model ${model}:`, error.message);
         }
-        return new Response(JSON.stringify({
-          response: text
-        }), {
-          headers: corsHeaders
-        });
-      } catch (retryError) {
-        throw new Error("Failed to generate response after retry");
       }
     }
+
+    throw new Error("Failed to generate response with all model fallbacks");
   } catch (error) {
     return new Response(JSON.stringify({
       error: "Service error",
