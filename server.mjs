@@ -26,15 +26,18 @@ app.use(express.json());
 
 app.post('/api/detect-waste', upload.single('image'), async (req, res) => {
   try {
+    console.log('[detect-waste] Image upload received');
     if (!req.file) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
+    console.log('[detect-waste] Converting to base64...');
     const base64Image = req.file.buffer.toString('base64');
     const model = genAI.getGenerativeModel({ model: 'gemini-3.5-flash' });
 
+    console.log('[detect-waste] Calling Gemini...');
     const result = await model.generateContent([
-      'Identify the waste item in this image. Return ONLY the item name.',
+      "Analyze this image and identify the waste item. Return ONLY the name of the waste item, nothing else. For example, if you see a plastic bottle, just return \"plastic bottle\". If you see multiple items, identify the most prominent waste item.",
       {
         inlineData: {
           mimeType: 'image/jpeg',
@@ -43,11 +46,14 @@ app.post('/api/detect-waste', upload.single('image'), async (req, res) => {
       }
     ]);
 
+    console.log('[detect-waste] Getting response...');
     const wasteName = (await result.response).text().trim();
+    console.log('[detect-waste] Detected:', wasteName);
     res.json({ wasteName });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('[detect-waste] Error:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: error.message || 'Unknown error' });
   }
 });
 
@@ -64,7 +70,26 @@ app.post('/api/gemini-search', async (req, res) => {
 
     console.log('[gemini-search] Calling Gemini...');
     const result = await model.generateContent(
-      `Waste expert: How to dispose of "${query.trim()}"? (2-3 sentences: method, bin category, special handling)`
+      `Given this waste disposal related query: "${query.trim()}"
+First, a brief introduction about the waste item.
+Then, use these exact headings with emoji:
+🔍 Type & Classification
+[Brief classification and characteristics]
+
+♻ Disposal Guidelines
+- [Main disposal method]
+- [Alternative methods if applicable]
+- [Special handling instructions]
+
+🌍 Environmental Impact
+- [Positive impacts when disposed correctly]
+- [Negative impacts if disposed incorrectly]
+
+⚠️ Safety Tips
+- [Key safety considerations]
+- [Handling precautions]
+
+VERY Strict Rule: Do NOT include any response lines like "Here's a response" before these headings. Start with a brief intro and the first heading. Format concisely, no extra sentences outside the structured sections.`
     );
 
     console.log('[gemini-search] Getting response...');
