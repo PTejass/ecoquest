@@ -94,23 +94,27 @@ const ImageInput = ({ darkMode, onImageProcessed }: ImageInputProps) => {
     setIsProcessing(true);
     setError(null);
     try {
-      // Convert data URL to Blob for FormData
+      console.log('Converting image data to blob...');
       const response = await fetch(imageData);
       const blob = await response.blob();
 
       const formData = new FormData();
       formData.append('image', blob, 'image.jpeg');
 
+      console.log('Sending to /api/detect-waste...');
       const res = await fetch('/api/detect-waste', {
         method: 'POST',
         body: formData
       });
 
+      console.log('Response status:', res.status);
+      const data = await res.json();
+      console.log('Response data:', data);
+
       if (!res.ok) {
-        throw new Error('Failed to detect waste');
+        throw new Error(data.error || 'Failed to detect waste');
       }
 
-      const data = await res.json();
       if (!data.wasteName) {
         throw new Error('Could not identify waste item');
       }

@@ -71,6 +71,7 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
       setError(null);
 
       try {
+        console.log('Fetching from /api/gemini-search with query:', searchQuery);
         const response = await fetch('/api/gemini-search', {
           method: 'POST',
           headers: {
@@ -79,7 +80,9 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
           body: JSON.stringify({ query: searchQuery })
         });
 
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', JSON.stringify(data));
 
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch AI recommendations');
