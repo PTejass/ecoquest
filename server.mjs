@@ -20,7 +20,7 @@ app.post('/api/detect-waste', upload.single('image'), async (req, res) => {
     }
 
     const base64Image = req.file.buffer.toString('base64');
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
     const result = await model.generateContent([
       "Analyze this image and identify the waste item. Return ONLY the name of the waste item, nothing else. For example, if you see a plastic bottle, just return \"plastic bottle\". If you see multiple items, identify the most prominent waste item.",
@@ -47,7 +47,7 @@ app.post('/api/gemini-search', async (req, res) => {
       return res.status(400).json({ error: 'Query required' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
     const result = await model.generateContent(
       `Given this waste disposal related query: "${query.trim()}"
