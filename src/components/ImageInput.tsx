@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, Upload, X } from 'lucide-react';
-import { detectWaste } from '../api/detect-waste';
 
 interface ImageInputProps {
   darkMode: boolean;
@@ -95,20 +94,28 @@ const ImageInput = ({ darkMode, onImageProcessed }: ImageInputProps) => {
     setIsProcessing(true);
     setError(null);
     try {
-      // Remove the data URL prefix to get just the base64 data
-      const base64Data = imageData.split(',')[1];
-      
-      const result = await detectWaste(base64Data);
+      // Convert data URL to Blob for FormData
+      const response = await fetch(imageData);
+      const blob = await response.blob();
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to detect waste');
+      const formData = new FormData();
+      formData.append('image', blob, 'image.jpeg');
+
+      const res = await fetch('/api/detect-waste', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to detect waste');
       }
 
-      if (!result.wasteName) {
+      const data = await res.json();
+      if (!data.wasteName) {
         throw new Error('Could not identify waste item');
       }
 
-      onImageProcessed(result.wasteName);
+      onImageProcessed(data.wasteName);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to process image';
       setError(`${errorMessage}. Please try again.`);

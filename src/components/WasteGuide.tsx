@@ -3,9 +3,6 @@ import { wasteTypes } from '../data/wasteTypes';
 import { locationSpecificInfo } from '../data/locations';
 import WasteCard from './WasteCard';
 import AISearchResults from './AISearchResults';
-// Read env vars at runtime and avoid creating clients at module scope
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 interface WasteGuideProps {
   location: string;
   searchQuery: string;
@@ -74,15 +71,10 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
       setError(null);
 
       try {
-        // Validate required env vars to avoid runtime crashes
-        if (!supabaseUrl || !supabaseAnonKey) {
-          throw new Error('Missing Supabase configuration. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
-        }
-        const response = await fetch(`${supabaseUrl}/functions/v1/gemini-search`, {
+        const response = await fetch('/api/gemini-search', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`
           },
           body: JSON.stringify({ query: searchQuery })
         });
@@ -90,7 +82,7 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || data.message || 'Failed to fetch AI recommendations');
+          throw new Error(data.error || 'Failed to fetch AI recommendations');
         }
 
         if (!data.response) {
@@ -100,8 +92,8 @@ const WasteGuide = ({ location, searchQuery, darkMode }: WasteGuideProps) => {
         setAiResult(data.response);
       } catch (err) {
         console.error('AI Search Error:', err);
-        const errorMessage = err instanceof Error 
-          ? err.message 
+        const errorMessage = err instanceof Error
+          ? err.message
           : 'Failed to fetch AI recommendations. Please try again later.';
         setError(errorMessage);
         setAiResult(null);
